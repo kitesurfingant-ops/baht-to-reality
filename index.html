@@ -163,6 +163,9 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 <div id="sheetHost"></div>
 <script src="config.js"></script>
 <script>
+/* ---------- version: bump this on every change so phones pick up the update ---------- */
+const APP_VERSION = '2026-11-15.1';
+
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
 const LS = {get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}, del(k){try{localStorage.removeItem(k)}catch(e){}}};
@@ -492,6 +495,27 @@ document.addEventListener('input', e => {
   }
 });
 document.addEventListener('change', e => {if (e.target.id === 'fDate'){const t = document.getElementById('fDateTxt'); if (t) t.textContent = fmtD(e.target.value);}if (e.target.id === 'fCur') e.target.dispatchEvent(new Event('input', {bubbles:true}));});
+
+// Auto-update: when the app opens or comes back to the screen, fetch the live page fresh
+// (skipping any saved copy). If it carries a newer APP_VERSION, reload onto it.
+async function checkForUpdate(){
+  if (S.sheet) return;                                              // never interrupt an edit
+  if (S.tab === 'add' && S.draft && (String(S.draft.amount || '').trim() || String(S.draft.item || '').trim())) return;  // or a half-typed entry
+  try {
+    const r = await fetch(location.pathname + '?check=' + Date.now(), {cache:'no-store'});
+    if (!r.ok) return;
+    const m = (await r.text()).match(/const APP_VERSION = '([^']+)'/);
+    if (!m || m[1] === APP_VERSION) return;
+    let tried = null; try {tried = sessionStorage.getItem('bt.tried');} catch(e){}
+    if (tried === m[1]) return;                                     // already tried this one; don't loop
+    try {sessionStorage.setItem('bt.tried', m[1]);} catch(e){}
+    LS.set('bt.updated', m[1]);
+    location.replace(location.pathname + '?v=' + encodeURIComponent(m[1]) + location.hash);
+  } catch(e){}
+}
+document.addEventListener('visibilitychange', () => {if (!document.hidden) checkForUpdate();});
+setTimeout(checkForUpdate, 1500);
+if (LS.get('bt.updated') === APP_VERSION){LS.set('bt.updated', ''); setTimeout(() => toast('App updated to the latest version'), 800);}
 
 render(); refresh();
 </script>
