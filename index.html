@@ -80,6 +80,10 @@ input[type=text],input[type=number],input[type=date],input[type=search],select,t
 textarea{min-height:64px;resize:vertical}
 /* iPhone draws date boxes and drop-downs at different heights: give them one look and one height */
 input[type=date],select{-webkit-appearance:none;appearance:none;height:48px;min-height:48px;line-height:1.2;padding:0 12px;display:block}
+.dbox{position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;height:48px;padding:0 12px;border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:16px;font-weight:400;color:var(--ink)}
+.dbox svg{width:20px;height:20px;color:var(--muted);flex:none}
+.dbox input[type=date]{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;margin:0;padding:0;-webkit-appearance:none;appearance:none}
+.dbox:focus-within{outline:3px solid var(--in);outline-offset:2px}
 input[type=date]{text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 input[type=date]::-webkit-calendar-picker-indicator{opacity:.6}
@@ -178,6 +182,7 @@ const gbp2 = v => '£' + num(v).toLocaleString('en-GB',{minimumFractionDigits:Ma
 // Display currency: tap the ฿/£ switch in the header. Everything is stored in baht; £ is worked out with the rate in Settings.
 const money = v => S.disp === 'GBP' ? gbp2(num(v)*rate()) : thb(v);   // main figure
 const alt = v => S.disp === 'GBP' ? thb(v) : gbp2(num(v)*rate());     // the small figure underneath
+const fmtD = k => k ? parseKey(k).toLocaleDateString('en-GB',{day:'numeric', month:'short', year:'numeric'}) : 'Pick a date';
 const NAMES = {ant:'Ant', jules:'Jules', joint:'Joint'};
 const other = w => w === 'ant' ? 'jules' : 'ant';
 
@@ -293,7 +298,7 @@ function formHtml(d, inSheet){
   <div class="f" style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow">Category</span>
     <div class="cats">${cs.map(c => `<button data-act="dcat" data-v="${esc(c)}" aria-pressed="${d.category===c}">${esc(c)}</button>`).join('')}</div></div>
   <div class="grid2">
-    <label class="f">Date<input id="fDate" type="date" value="${esc(d.entry_date)}"></label>
+    <label class="f">Date<span class="dbox"><span id="fDateTxt">${fmtD(d.entry_date)}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><input id="fDate" type="date" value="${esc(d.entry_date)}" aria-label="Date"></span></label>
     <label class="f">Who<select id="fWho">${['ant','jules','joint'].map(w => `<option value="${w}" ${d.who===w?'selected':''}>${NAMES[w]}</option>`).join('')}</select></label>
   </div>
   <label class="f">Notes (optional)<textarea id="fNotes" maxlength="500">${esc(d.notes)}</textarea></label>
@@ -478,6 +483,7 @@ document.addEventListener('click', async e => {
   }
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'fDate'){const t = document.getElementById('fDateTxt'); if (t) t.textContent = fmtD(e.target.value);}
   if (e.target.id === 'fSearch'){S.search = e.target.value; const pos = e.target.selectionStart; render(); const s = $('#fSearch'); s.focus(); s.setSelectionRange(pos, pos);}
   if (e.target.id === 'fAmount' || e.target.id === 'fCur'){
     const d = readForm(); const c = document.getElementById('fConv'); const sym = e.target.closest('.amount')?.querySelector('.sym');
@@ -485,7 +491,7 @@ document.addEventListener('input', e => {
     if (c){c.hidden = d.cur !== 'GBP'; c.textContent = `≈ ${thb(num(d.amount)/rate())} at £1 = ฿${(1/rate()).toFixed(1)}`;}
   }
 });
-document.addEventListener('change', e => {if (e.target.id === 'fCur') e.target.dispatchEvent(new Event('input', {bubbles:true}));});
+document.addEventListener('change', e => {if (e.target.id === 'fDate'){const t = document.getElementById('fDateTxt'); if (t) t.textContent = fmtD(e.target.value);}if (e.target.id === 'fCur') e.target.dispatchEvent(new Event('input', {bubbles:true}));});
 
 render(); refresh();
 </script>
