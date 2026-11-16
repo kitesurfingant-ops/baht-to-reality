@@ -245,7 +245,7 @@ const rate = () => num(S.cfg?.gbp_rate) || 0.0223;
 const cats = kind => (S.cfg?.categories || []).filter(c => c.kind === kind && c.active !== false).sort((a,b) => a.sort - b.sort).map(c => c.name);
 const monthRows = m => S.entries[m] || [];
 function sums(m){
-  const rows = monthRows(m); const o = {inc:0, out:0, byCat:{}, byWho:{ant:0, jules:0, joint:0}, fixedOut:0, n:rows.length, hasFixed:rows.some(r => r.is_fixed)};
+  const rows = monthRows(m); const o = {inc:0, out:0, byCat:{}, byWho:{ant:0, jules:0, joint:0}, fixedOut:0, n:rows.length, hasFixed:rows.some(r => r.is_fixed), fromSheet:rows.some(r => r.notes === 'From Google Sheet')};
   rows.forEach(r => {
     const a = num(r.amount_thb);
     if (r.kind === 'income'){o.inc += a; return;}
@@ -356,7 +356,8 @@ function viewMonth(){
   const who = s.byWho, wt = Math.max(1, who.ant + who.jules + who.joint);
   return `${syncNote()}
   <div class="mhead"><button class="btn ghost" data-act="month" data-d="-1" aria-label="Previous month">‹</button><h2>${monthName(m)}</h2><button class="btn ghost" data-act="month" data-d="1" aria-label="Next month">›</button></div>
-  ${!s.hasFixed && m >= mkey(new Date()) && (S.cfg?.fixed||[]).length ? `<div class="banner"><div class="t"><b>Fixed items not added yet</b><p class="small">Rent, car, cleaning, salary and house money for ${monthStart(m).toLocaleDateString('en-GB',{month:'long'})}.</p></div><button class="btn primary" data-act="applyfixed">Add them</button></div>` : ''}
+  ${s.fromSheet ? `<p class="note">Jules's lines come from the Google Sheet and update daily.</p>` : ''}
+  ${!s.hasFixed && !s.fromSheet && m >= mkey(new Date()) && (S.cfg?.fixed||[]).length ? `<div class="banner"><div class="t"><b>Fixed items not added yet</b><p class="small">Rent, car, cleaning, salary and house money for ${monthStart(m).toLocaleDateString('en-GB',{month:'long'})}.</p></div><button class="btn primary" data-act="applyfixed">Add them</button></div>` : ''}
   <section class="left ${left<0?'neg':''}"><p class="eyebrow">Left over</p><span class="v">${money(left)}</span><span class="small num muted">${alt(left)} · from ${money(s.inc)} in</span></section>
   <div class="tiles">
     <div class="tile i"><span class="eyebrow">Money in</span><span class="v">${money(s.inc)}</span><span class="small muted num">${alt(s.inc)}</span></div>
