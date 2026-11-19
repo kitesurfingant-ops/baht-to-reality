@@ -191,7 +191,7 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 <script src="config.js"></script>
 <script>
 /* ---------- version: bump this on every change so phones pick up the update ---------- */
-const APP_VERSION = '2026-11-19.4';
+const APP_VERSION = '2026-11-19.5';
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -227,9 +227,9 @@ const C = window.FIN_CONFIG || {};
 const S = {
   me: LS.get('ts.me') || ((location.hash.match(/^#(ant|jules)\./) || [])[1]) || null, tab: 'add', sync: 'idle',
   cfg: null, entries: {}, month: mkey(new Date()),
-  disp: LS.get('ts.disp') === 'GBP' ? 'GBP' : 'THB', draft: null, search: '', sheet: null, settingsDraft: null, openCat: null,
+  disp: LS.get('ts.disp') === 'GBP' ? 'GBP' : 'THB', carry: [], accounts: [], draft: null, search: '', sheet: null, settingsDraft: null, openCat: null,
 };
-try {const c = JSON.parse(LS.get('ts.cache') || 'null'); if (c){S.cfg = c.cfg; S.entries = c.entries || {};}} catch(e){}
+try {const c = JSON.parse(LS.get('ts.cache') || 'null'); if (c){S.cfg = c.cfg; S.entries = c.entries || {}; S.carry = c.carry || []; S.accounts = c.accounts || [];}} catch(e){}
 
 /* ---------- Supabase calls (only the fin_* functions are open, and only with the household key) ---------- */
 async function rpc(fn, body){
@@ -237,7 +237,7 @@ async function rpc(fn, body){
   if (!r.ok){const t = await r.text().catch(() => ''); const e = new Error(t || ('HTTP ' + r.status)); e.status = r.status; throw e;}
   return r.status === 204 ? null : r.json().catch(() => null);
 }
-function saveCache(){LS.set('ts.cache', JSON.stringify({cfg:S.cfg, entries:S.entries}));}
+function saveCache(){LS.set('ts.cache', JSON.stringify({cfg:S.cfg, entries:S.entries, carry:S.carry, accounts:S.accounts}));}
 function setSync(s){S.sync = s; $('#syncDot').className = 'sync' + (s==='ok' ? ' ok' : s==='off' ? ' bad' : '');}
 
 // Load the shown month plus the one before (for the comparison)
@@ -251,8 +251,8 @@ async function refresh(quiet){
     const loM = addMonths(S.month < nowM ? S.month : nowM, -1), lo = loM + '-01';
     const hiM = S.month > nowM ? S.month : nowM;
     const hi = `${hiM}-${pad(daysIn(hiM))}`;
-    const [cfg, rows] = await Promise.all([rpc('fin_config', {}), rpc('fin_list', {p_from:lo, p_to:hi})]);
-    S.cfg = cfg;
+    const [cfg, rows, carry, accts] = await Promise.all([rpc('fin_config', {}), rpc('fin_list', {p_from:lo, p_to:hi}), rpc('fin_carry', {}), rpc('fin_accounts_list', {})]);
+    S.cfg = cfg; S.carry = carry || []; S.accounts = accts || [];
     // replace cached months covered by this fetch
     for (let m = loM; m <= hiM; m = addMonths(m, 1)) delete S.entries[m];
     (rows || []).forEach(r => {const m = r.entry_date.slice(0,7); (S.entries[m] ||= []).push(r);});
@@ -274,6 +274,9 @@ const monthRows = m => S.entries[m] || [];
 // Fun (discretionary) categories are ticked in Settings; every other spend counts as essential
 const funCats = () => (S.cfg?.categories || []).filter(c => c.kind === 'spend' && c.is_fun).map(c => c.name);
 const funBudget = () => num(S.cfg?.fun_budget_thb);
+// Spare money carries forward: net (money in − all spending) of every month from CARRY_FROM up to the one before m. An overspend carries as a minus.
+const CARRY_FROM = '2026-09';
+const carryInto = m => (S.carry || []).reduce((t, r) => {const k = String(r.month).slice(0,7); return k >= CARRY_FROM && k < m ? t + num(r.net) : t;}, 0);
 function sums(m){
   const rows = monthRows(m), fc = funCats(); const o = {inc:0, out:0, fun:0, byCat:{}, byWho:{ant:0, jules:0, joint:0}, fixedOut:0, n:rows.length, hasFixed:rows.some(r => r.is_fixed), fromSheet:rows.some(r => r.notes === 'From Google Sheet')};
   rows.forEach(r => {
@@ -341,16 +344,18 @@ function formHtml(d, inSheet){
 }
 function viewAdd(){
   if (!S.draft) S.draft = blankDraft();
-  const m = mkey(new Date()), s = sums(m);
+  const m = mkey(new Date()), s = sums(m), cf = carryInto(m), lft = cf + s.inc - s.out;
   const recent = monthRows(m).filter(r => !r.is_fixed).slice(0, 5);
   return `${syncNote()}${installCard()}
   <section class="card">${formHtml(S.draft)}</section>
   <section class="card"><div class="mhead"><h3>${monthName(m)} so far</h3><span class="num" style="font-weight:700">${money(s.out)}</span></div>
-    <p class="small muted num">Left from ${money(s.inc)} in: <b style="color:${s.inc-s.out<0?'var(--out)':'var(--in)'}">${money(s.inc - s.out)}</b> (${alt(s.inc - s.out)})</p>
+    <p class="small muted num">Left over: <b style="color:${lft<0?'var(--out)':'var(--in)'}">${money(lft)}</b> (${alt(lft)})</p>
+    <p class="note num">${cf ? `${money(cf)} carried over + ` : ''}${money(s.inc)} in − ${money(s.out)} spent${cf ? ` · this month on its own ${money(s.inc - s.out)}` : ''}</p>
     ${recent.length ? `<div class="list">${recent.map(entRow).join('')}</div>` : `<p class="small muted">Nothing logged yet this month.</p>`}
   </section>`;
 }
 function readForm(){
+  if (S.sheet && S.sheet.acct) return null;
   const d = S.sheet ? S.sheet.d : S.draft; if (!d) return d;
   const g = id => document.getElementById(id);
   if (g('fAmount')) d.amount = g('fAmount').value.replace(/[^0-9.,]/g,'').replace(/,/g,'');
@@ -379,7 +384,7 @@ async function saveDraft(){
 
 /* ----- Month ----- */
 function viewMonth(){
-  const m = S.month, s = sums(m), p = sums(addMonths(m,-1)), left = s.inc - s.out, r = rate();
+  const m = S.month, s = sums(m), p = sums(addMonths(m,-1)), cf = carryInto(m), left = cf + s.inc - s.out, r = rate();
   const isNow = m === mkey(new Date()); const dayN = isNow ? new Date().getDate() : daysIn(m);
   const catList = [...new Set([...cats('spend'), ...Object.keys(s.byCat)])].map(c => [c, s.byCat[c] || 0]).filter(x => x[1] > 0).sort((a,b) => b[1]-a[1]);
   const max = Math.max(1, ...catList.map(x => x[1]));
@@ -389,7 +394,8 @@ function viewMonth(){
   <div class="mhead"><button class="btn ghost" data-act="month" data-d="-1" aria-label="Previous month">‹</button><h2>${monthName(m)}</h2><button class="btn ghost" data-act="month" data-d="1" aria-label="Next month">›</button></div>
   ${s.fromSheet ? `<p class="note">Jules's lines come from the Google Sheet and update daily.</p>` : ''}
   ${!s.hasFixed && !s.fromSheet && m >= mkey(new Date()) && (S.cfg?.fixed||[]).length ? `<div class="banner"><div class="t"><b>Fixed items not added yet</b><p class="small">Rent, car, cleaning, salary and house money for ${monthStart(m).toLocaleDateString('en-GB',{month:'long'})}.</p></div><button class="btn primary" data-act="applyfixed">Add them</button></div>` : ''}
-  <section class="left ${left<0?'neg':''}"><p class="eyebrow">Left over</p><span class="v">${money(left)}</span><span class="small num muted">${alt(left)} · from ${money(s.inc)} in</span></section>
+  <section class="left ${left<0?'neg':''}"><p class="eyebrow">Left over</p><span class="v">${money(left)}</span><span class="small num muted">${alt(left)} · ${cf ? `${money(cf)} carried over + ` : 'from '}${money(s.inc)} in</span>
+    ${cf ? `<span class="small num muted">${monthStart(m).toLocaleDateString('en-GB',{month:'long'})} on its own: ${money(s.inc - s.out)}</span>` : ''}</section>
   <div class="tiles">
     <div class="tile i"><span class="eyebrow">Money in</span><span class="v">${money(s.inc)}</span><span class="small muted num">${alt(s.inc)}</span></div>
     <div class="tile o"><span class="eyebrow">Spent</span><span class="v">${money(s.out)}</span><span class="small muted num">${alt(s.out)}</span></div>
@@ -409,7 +415,37 @@ function viewMonth(){
     <div class="split">${['ant','jules','joint'].map(w => `<i style="width:${(who[w]/wt*100).toFixed(1)}%;background:var(--${w})"></i>`).join('')}</div>
     <div class="legend">${['ant','jules','joint'].filter(w => who[w] > 0).map(w => `<span class="num"><i style="background:var(--${w})"></i>${NAMES[w]} ${money(who[w])}</span>`).join('') || '<span>Nothing yet</span>'}</div>
   </section>
+  ${accountsCard()}
   <button class="btn full" data-act="tab" data-tab="entries">See all ${s.n} entries</button>`;
+}
+
+/* ----- Accounts: latest bank balances (each update is kept as history in the database) ----- */
+const inThb = a => a.balance == null ? 0 : a.currency === 'GBP' ? num(a.balance) / rate() : num(a.balance);
+function accountsCard(){
+  const list = S.accounts || []; if (!list.length) return '';
+  const tot = list.reduce((t, a) => t + inThb(a), 0);
+  const when = t => t ? new Date(t).toLocaleDateString('en-GB',{day:'numeric', month:'short'}) : '';
+  return `<section class="card"><div class="mhead"><h3>Accounts</h3><span class="num" style="font-weight:700">${money(tot)}</span></div>
+    <p class="note" style="margin-top:-6px">Tap an account to update its balance.</p>
+    <div class="list">${list.map(a => `<button class="ent" data-act="acct" data-id="${a.id}"><span class="who joint">${esc(a.name[0] || '·')}</span><span class="t"><b>${esc(a.name)}</b><span class="small muted">${a.balance == null ? 'No balance yet' : `${esc(NAMES[a.set_by] || a.set_by || '')} · ${when(a.set_at)}`}</span></span><span class="a">${a.balance == null ? '–' : a.currency === 'GBP' ? gbp2(a.balance) : thb(a.balance)}</span></button>`).join('')}</div>
+    <p class="note num">Total ${money(tot)} (${alt(tot)}) · £ balances converted at today's rate</p></section>`;
+}
+function acctSheet(){
+  const a = S.sheet.acct;
+  return `<div class="mhead"><h3>${esc(a.name)}</h3><button class="btn ghost" data-act="closesheet">Close</button></div>
+    <div class="amount"><span class="sym">${a.cur==='GBP'?'£':'฿'}</span>
+      <input id="aBal" inputmode="decimal" placeholder="0" value="${esc(a.bal)}" aria-label="Balance" autocomplete="off">
+      <select id="aCur" aria-label="Currency"><option value="THB" ${a.cur==='THB'?'selected':''}>THB</option><option value="GBP" ${a.cur==='GBP'?'selected':''}>GBP</option></select></div>
+    <p class="note">Saved as a new balance for today; earlier balances are kept.</p>
+    <button class="btn big full primary" data-act="acctsave">Save balance</button>`;
+}
+async function saveAcct(){
+  const a = S.sheet.acct, v = String($('#aBal')?.value || '').replace(/[^0-9.\-]/g,''), cur = $('#aCur')?.value || a.cur;
+  if (v === '' || !Number.isFinite(Number(v))){toast('Enter a balance'); return;}
+  try {
+    await rpc('fin_account_set', {p_id:a.id, p_balance:Number(v), p_currency:cur, p_who:S.me});
+    S.sheet = null; renderSheet(); toast('Balance saved'); refresh(true);
+  } catch(e){toast('Could not save. Check your connection and try again.');}
 }
 
 /* ----- Enjoy: the fun budget ----- */
@@ -420,13 +456,14 @@ function viewEnjoy(){
     <p class="muted">In Settings, set a monthly fun budget and tick which spending categories count as fun. Everything else counts as essentials.</p>
     <button class="btn primary" data-act="tab" data-tab="settings">Go to Settings</button></section>`;
   const nowM = mkey(new Date()), isNow = m === nowM, past = m < nowM;
-  const budLeft = bud - s.fun, used = s.fun / bud;
-  const cash = s.inc - s.out;                  // money actually left this month (in − all spending)
+  const cf = carryInto(m), pot = bud + Math.max(0, cf);   // fun pot: this month's budget plus any spare carried over
+  const budLeft = pot - s.fun, used = s.fun / pot;
+  const cash = cf + s.inc - s.out;             // money actually available (carried over + in − all spending)
   const left = Math.min(budLeft, cash);        // you can only enjoy what's really there
   const short = budLeft > 0 ? Math.max(0, budLeft - Math.max(0, cash)) : 0;   // top-up to unlock the rest of the budget
   const daysLeft = isNow ? daysIn(m) - new Date().getDate() + 1 : (past ? 0 : daysIn(m));   // today counts
   const ess = s.out - s.fun;
-  const gap = s.inc - ess - bud;   // what's left after essentials and the full fun budget
+  const gap = cf + s.inc - ess - bud;   // what's left after essentials and the full fun budget
   const low = left <= 0 || used > 0.85;
   const mood = past ? (left >= 0 ? `Came in ${money(left)} under` : `Went ${money(-left)} over`)
     : budLeft < 0 ? 'Over budget – reel it in' : left <= 0 ? 'Top up first, then enjoy it' : short > 0 ? 'Top up to unlock the rest' : used > 0.85 ? 'Easy does it' : used < 0.5 && (!isNow || new Date().getDate() > 10) ? 'Plenty in the pot – go and enjoy it' : 'On track – enjoy yourselves';
@@ -434,7 +471,7 @@ function viewEnjoy(){
   return `${syncNote()}${nav}
   <section class="fun ${low?'low':''}"><p class="eyebrow">${past ? 'Fun money left at month end' : 'Left to enjoy'}</p>
     <span class="v">${money(left)}</span>
-    <span class="small num muted">${alt(left)} · ${money(s.fun)} of ${money(bud)} fun budget used</span>
+    <span class="small num muted">${alt(left)} · ${money(s.fun)} of ${money(pot)} fun pot used${cf > 0 ? ` (${money(bud)} budget + ${money(cf)} carried over)` : ''}</span>
     ${short > 0 && !past ? `<span class="small num"><b>Budget left ${money(budLeft)}</b>, but only ${money(Math.max(0,cash))} is actually in. Put in <b>${money(short)}</b> (${alt(short)}) to unlock the rest.</span>` : ''}
     <div class="track"><i style="width:${Math.min(100, used*100).toFixed(1)}%"></i></div>
     <span class="mood">${mood}</span></section>
@@ -450,6 +487,7 @@ function viewEnjoy(){
     }).join('')}</div></section>
   <section class="card"><h3>Does it add up?</h3>
     <div class="calc">
+      <span>Carried over</span><span>${cf < 0 ? '− ' : ''}${money(Math.abs(cf))}</span>
       <span>Money in</span><span>${money(s.inc)}</span>
       <span>Essentials ${isNow ? 'so far' : ''}</span><span>− ${money(ess)}</span>
       <span>Fun budget</span><span>− ${money(bud)}</span>
@@ -490,6 +528,7 @@ function openEdit(id){
 function renderSheet(){
   const host = $('#sheetHost');
   if (!S.sheet){host.innerHTML = ''; return;}
+  if (S.sheet.acct){host.innerHTML = `<div class="sheet-bg" data-act="closesheet"><div class="sheet" role="dialog" aria-label="Update balance">${acctSheet()}</div></div>`; return;}
   host.innerHTML = `<div class="sheet-bg" data-act="closesheet"><div class="sheet" role="dialog" aria-label="Edit entry">
     <div class="mhead"><h3>Edit entry</h3><button class="btn ghost" data-act="closesheet">Close</button></div>
     ${S.sheet.confirm ? `<div class="banner"><div class="t"><b>Delete “${esc(S.sheet.d.item)}”?</b><p class="small">This can't be undone.</p></div></div>
@@ -596,6 +635,8 @@ document.addEventListener('click', async e => {
     case 'dcat': {const d = S.sheet ? S.sheet.d : S.draft; d.category = b.dataset.v; S.sheet ? renderSheet() : render(); break;}
     case 'save': saveDraft(); break;
     case 'edit': openEdit(b.dataset.id); break;
+    case 'acct': {const x = (S.accounts || []).find(a => a.id === b.dataset.id); if (x){S.sheet = {acct:{id:x.id, name:x.name, cur:x.currency || 'THB', bal: x.balance == null ? '' : String(num(x.balance))}}; renderSheet();} break;}
+    case 'acctsave': saveAcct(); break;
     case 'closesheet': S.sheet = null; renderSheet(); break;
     case 'delask': S.sheet.confirm = true; renderSheet(); break;
     case 'delno': S.sheet.confirm = false; renderSheet(); break;
@@ -620,7 +661,7 @@ document.addEventListener('input', e => {
     if (c){c.hidden = d.cur !== 'GBP'; c.textContent = `≈ ${thb(num(d.amount)/rate())} at £1 = ฿${(1/rate()).toFixed(1)}`;}
   }
 });
-document.addEventListener('change', e => {if (S.tab === 'settings' && e.target.matches('select[data-fx]')){markDirty(); if (e.target.dataset.k === 'kind'){readSettings(); const f = S.settingsDraft.fixed[+e.target.dataset.fx]; if (!cats(f.kind).includes(f.category)) f.category = cats(f.kind)[0] || ''; render();}} /* kind change moves the item to its group */ if (e.target.id === 'fDate'){const t = document.getElementById('fDateTxt'); if (t) t.textContent = fmtD(e.target.value);}if (e.target.id === 'fCur') e.target.dispatchEvent(new Event('input', {bubbles:true}));});
+document.addEventListener('change', e => {if (S.tab === 'settings' && e.target.matches('select[data-fx]')){markDirty(); if (e.target.dataset.k === 'kind'){readSettings(); const f = S.settingsDraft.fixed[+e.target.dataset.fx]; if (!cats(f.kind).includes(f.category)) f.category = cats(f.kind)[0] || ''; render();}} /* kind change moves the item to its group */ if (e.target.id === 'fDate'){const t = document.getElementById('fDateTxt'); if (t) t.textContent = fmtD(e.target.value);}if (e.target.id === 'aCur'){const sym = e.target.closest('.amount')?.querySelector('.sym'); if (sym) sym.textContent = e.target.value === 'GBP' ? '£' : '฿';} if (e.target.id === 'fCur') e.target.dispatchEvent(new Event('input', {bubbles:true}));});
 
 // Auto-update: when the app opens or comes back to the screen, fetch the live page fresh
 // (skipping any saved copy). If it carries a newer APP_VERSION, reload onto it.

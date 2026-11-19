@@ -6,7 +6,7 @@ A private shared expense and income log for Ant and Jules in Thailand, installed
 - `config.js` – Supabase URL and publishable key (public by design)
 - `icon-*.png` – home screen icon
 
-Data lives in the tables `fin_entries`, `fin_categories`, `fin_fixed` and `fin_households`, with the summary view `fin_monthly_summary`. The tables are closed to the web; the app can only call `fin_config`, `fin_list`, `fin_put`, `fin_del`, `fin_apply_fixed` and `fin_save_config`, which need the household key from each person's private link.
+Data lives in the tables `fin_entries`, `fin_categories`, `fin_fixed` and `fin_households`, plus `fin_accounts` and `fin_account_balances` for bank balances, with the summary view `fin_monthly_summary`. The tables are closed to the web; the app can only call `fin_config`, `fin_list`, `fin_put`, `fin_del`, `fin_apply_fixed`, `fin_save_config`, `fin_carry`, `fin_accounts_list` and `fin_account_set`, which need the household key from each person's private link.
 
 Private link: `https://kitesurfingant-ops.github.io/baht-to-reality/#<ant|jules>.<key>` (the key is not stored in this repo).
 
