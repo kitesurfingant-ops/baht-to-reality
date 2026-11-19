@@ -410,18 +410,22 @@ function viewEnjoy(){
     <p class="muted">In Settings, set a monthly fun budget and tick which spending categories count as fun. Everything else counts as essentials.</p>
     <button class="btn primary" data-act="tab" data-tab="settings">Go to Settings</button></section>`;
   const nowM = mkey(new Date()), isNow = m === nowM, past = m < nowM;
-  const left = bud - s.fun, used = s.fun / bud;
+  const budLeft = bud - s.fun, used = s.fun / bud;
+  const cash = s.inc - s.out;                  // money actually left this month (in − all spending)
+  const left = Math.min(budLeft, cash);        // you can only enjoy what's really there
+  const short = budLeft > 0 ? Math.max(0, budLeft - Math.max(0, cash)) : 0;   // top-up to unlock the rest of the budget
   const daysLeft = isNow ? daysIn(m) - new Date().getDate() + 1 : (past ? 0 : daysIn(m));   // today counts
   const ess = s.out - s.fun;
   const gap = s.inc - ess - bud;   // what's left after essentials and the full fun budget
-  const low = left < 0 || used > 0.85;
+  const low = left <= 0 || used > 0.85;
   const mood = past ? (left >= 0 ? `Came in ${money(left)} under` : `Went ${money(-left)} over`)
-    : left < 0 ? 'Over budget – reel it in' : used > 0.85 ? 'Easy does it' : used < 0.5 && (!isNow || new Date().getDate() > 10) ? 'Plenty in the pot – go and enjoy it' : 'On track – enjoy yourselves';
+    : budLeft < 0 ? 'Over budget – reel it in' : left <= 0 ? 'Top up first, then enjoy it' : short > 0 ? 'Top up to unlock the rest' : used > 0.85 ? 'Easy does it' : used < 0.5 && (!isNow || new Date().getDate() > 10) ? 'Plenty in the pot – go and enjoy it' : 'On track – enjoy yourselves';
   const catList = fc.map(c => [c, s.byCat[c] || 0]).sort((a,b) => b[1]-a[1]);
   return `${syncNote()}${nav}
   <section class="fun ${low?'low':''}"><p class="eyebrow">${past ? 'Fun money left at month end' : 'Left to enjoy'}</p>
     <span class="v">${money(left)}</span>
-    <span class="small num muted">${alt(left)} · ${money(s.fun)} of ${money(bud)} used</span>
+    <span class="small num muted">${alt(left)} · ${money(s.fun)} of ${money(bud)} fun budget used</span>
+    ${short > 0 && !past ? `<span class="small num"><b>Budget left ${money(budLeft)}</b>, but only ${money(Math.max(0,cash))} is actually in. Put in <b>${money(short)}</b> (${alt(short)}) to unlock the rest.</span>` : ''}
     <div class="track"><i style="width:${Math.min(100, used*100).toFixed(1)}%"></i></div>
     <span class="mood">${mood}</span></section>
   <div class="tiles">
