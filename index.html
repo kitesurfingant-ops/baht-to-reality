@@ -191,7 +191,7 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 <script src="config.js"></script>
 <script>
 /* ---------- version: bump this on every change so phones pick up the update ---------- */
-const APP_VERSION = '2026-11-19.7';
+const APP_VERSION = '2026-11-19.8';
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -434,14 +434,30 @@ function viewMonth(){
 
 /* ----- Accounts: latest bank balances (each update is kept as history in the database) ----- */
 const inThb = a => a.balance == null ? 0 : a.currency === 'GBP' ? num(a.balance) / rate() : num(a.balance);
+// Rent is paid into the joint account early. A balance typed in before rent day still holds the next rent,
+// so that much is treated as set aside: from the joint account, next rent day after the balance was updated.
+const RENT_DAY = 1;                                         // rent goes out on the 1st
+const isJoint = a => /deane|wise|joint/i.test(a.name || '');
+const rentThb = () => {const f = (S.cfg?.fixed || []).find(x => x.kind === 'spend' && /rent/i.test((x.category || '') + ' ' + (x.item || '')) && !/car/i.test(x.item || '')); return f ? num(f.amount_thb) : 0;};
+function rentHeld(a){
+  if (!isJoint(a) || a.balance == null || !(rentThb() > 0)) return null;
+  const d = new Date(a.set_at || Date.now()); const due = new Date(d.getFullYear(), d.getMonth(), RENT_DAY);
+  if (due <= d) due.setMonth(due.getMonth() + 1);          // next rent day after the balance was updated
+  const thbAmt = Math.min(rentThb(), inThb(a));            // never more than is in the account
+  return {thb: thbAmt, due};
+}
 function accountsCard(){
   const list = S.accounts || []; if (!list.length) return '';
   const tot = list.reduce((t, a) => t + inThb(a), 0);
+  const held = list.reduce((t, a) => t + (rentHeld(a)?.thb || 0), 0), avail = tot - held;
+  const sub = a => {const h = rentHeld(a); const base = a.balance == null ? 'No balance yet' : `${esc(NAMES[a.set_by] || a.set_by || '')} · ${when(a.set_at)}`;
+    return h ? `${base}<br>${a.currency === 'GBP' ? gbp2(h.thb * rate()) : thb(h.thb)} set aside for ${h.due.toLocaleDateString('en-GB',{day:'numeric', month:'short'})} rent` : base;};
   const when = t => t ? new Date(t).toLocaleDateString('en-GB',{day:'numeric', month:'short'}) : '';
   return `<section class="card"><div class="mhead"><h3>Accounts</h3><span class="num" style="font-weight:700">${money(tot)}</span></div>
     <p class="note" style="margin-top:-6px">Tap an account to update its balance.</p>
-    <div class="list">${list.map(a => `<button class="ent" data-act="acct" data-id="${a.id}"><span class="who joint">${esc(a.name[0] || '·')}</span><span class="t"><b>${esc(a.name)}</b><span class="small muted">${a.balance == null ? 'No balance yet' : `${esc(NAMES[a.set_by] || a.set_by || '')} · ${when(a.set_at)}`}</span></span><span class="a">${a.balance == null ? '–' : a.currency === 'GBP' ? gbp2(a.balance) : thb(a.balance)}</span></button>`).join('')}</div>
-    <p class="note num">Total ${money(tot)} (${alt(tot)}) · £ balances converted at today's rate</p></section>`;
+    <div class="list">${list.map(a => `<button class="ent" data-act="acct" data-id="${a.id}"><span class="who joint">${esc(a.name[0] || '·')}</span><span class="t"><b>${esc(a.name)}</b><span class="small muted">${sub(a)}</span></span><span class="a">${a.balance == null ? '–' : a.currency === 'GBP' ? gbp2(a.balance) : thb(a.balance)}</span></button>`).join('')}</div>
+    ${held ? `<div class="calc" style="margin-top:4px"><span>In the accounts</span><span>${money(tot)}</span><span>Set aside for rent</span><span>− ${money(held)}</span><span class="tot">Available</span><span class="tot" style="color:${avail<0?'var(--out)':'var(--in)'}">${money(avail)}</span></div>` : ''}
+    <p class="note num">${held ? `Available ${alt(avail)}. Rent goes out on the ${RENT_DAY === 1 ? '1st' : RENT_DAY}; update the balance after it has.` : `Total ${alt(tot)}.`} £ balances converted at today's rate.</p></section>`;
 }
 function acctSheet(){
   const a = S.sheet.acct;
