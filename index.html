@@ -191,7 +191,7 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 <script src="config.js"></script>
 <script>
 /* ---------- version: bump this on every change so phones pick up the update ---------- */
-const APP_VERSION = '2026-11-19.5';
+const APP_VERSION = '2026-11-19.6';
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -277,6 +277,16 @@ const funBudget = () => num(S.cfg?.fun_budget_thb);
 // Spare money carries forward: net (money in − all spending) of every month from CARRY_FROM up to the one before m. An overspend carries as a minus.
 const CARRY_FROM = '2026-09';
 const carryInto = m => (S.carry || []).reduce((t, r) => {const k = String(r.month).slice(0,7); return k >= CARRY_FROM && k < m ? t + num(r.net) : t;}, 0);
+// Top-up needed to unlock the rest of the fun pot this month (same sum as the Enjoy tab). 0 if none, no budget set, or a past month.
+function topUp(m){
+  const bud = funBudget(); if (!(bud > 0) || !funCats().length || m < mkey(new Date())) return 0;
+  const s = sums(m), cf = carryInto(m), budLeft = bud + Math.max(0, cf) - s.fun, cash = cf + s.inc - s.out;
+  return budLeft > 0 ? Math.max(0, budLeft - Math.max(0, cash)) : 0;
+}
+function topUpBanner(m){
+  const t = topUp(m); if (!(t > 0)) return '';
+  return `<div class="banner"><div class="t"><b>Put in ${money(t)} (${alt(t)})</b><p class="small">to unlock the rest of this month's fun money.</p></div><button class="btn primary" data-act="tab" data-tab="enjoy">See why</button></div>`;
+}
 function sums(m){
   const rows = monthRows(m), fc = funCats(); const o = {inc:0, out:0, fun:0, byCat:{}, byWho:{ant:0, jules:0, joint:0}, fixedOut:0, n:rows.length, hasFixed:rows.some(r => r.is_fixed), fromSheet:rows.some(r => r.notes === 'From Google Sheet')};
   rows.forEach(r => {
@@ -346,7 +356,7 @@ function viewAdd(){
   if (!S.draft) S.draft = blankDraft();
   const m = mkey(new Date()), s = sums(m), cf = carryInto(m), lft = cf + s.inc - s.out;
   const recent = monthRows(m).filter(r => !r.is_fixed).slice(0, 5);
-  return `${syncNote()}${installCard()}
+  return `${syncNote()}${topUpBanner(m)}${installCard()}
   <section class="card">${formHtml(S.draft)}</section>
   <section class="card"><div class="mhead"><h3>${monthName(m)} so far</h3><span class="num" style="font-weight:700">${money(s.out)}</span></div>
     <p class="small muted num">Left over: <b style="color:${lft<0?'var(--out)':'var(--in)'}">${money(lft)}</b> (${alt(lft)})</p>
@@ -392,6 +402,7 @@ function viewMonth(){
   const who = s.byWho, wt = Math.max(1, who.ant + who.jules + who.joint);
   return `${syncNote()}
   <div class="mhead"><button class="btn ghost" data-act="month" data-d="-1" aria-label="Previous month">‹</button><h2>${monthName(m)}</h2><button class="btn ghost" data-act="month" data-d="1" aria-label="Next month">›</button></div>
+  ${topUpBanner(m)}
   ${s.fromSheet ? `<p class="note">Jules's lines come from the Google Sheet and update daily.</p>` : ''}
   ${!s.hasFixed && !s.fromSheet && m >= mkey(new Date()) && (S.cfg?.fixed||[]).length ? `<div class="banner"><div class="t"><b>Fixed items not added yet</b><p class="small">Rent, car, cleaning, salary and house money for ${monthStart(m).toLocaleDateString('en-GB',{month:'long'})}.</p></div><button class="btn primary" data-act="applyfixed">Add them</button></div>` : ''}
   <section class="left ${left<0?'neg':''}"><p class="eyebrow">Left over</p><span class="v">${money(left)}</span><span class="small num muted">${alt(left)} · ${cf ? `${money(cf)} carried over + ` : 'from '}${money(s.inc)} in</span>
