@@ -12,4 +12,5 @@ Private link: `https://kitesurfingant-ops.github.io/baht-to-reality/#<ant|jules>
 
 
 ## Updating
+The version (APP_VERSION) is shown at the bottom of every page.
 Bump `APP_VERSION` near the top of the script in `index.html` with every change. When the app opens, it fetches the live page fresh, and if the version differs it reloads onto the new one, so neither phone is stuck on a cached copy.

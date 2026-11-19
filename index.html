@@ -191,7 +191,7 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 <script src="config.js"></script>
 <script>
 /* ---------- version: bump this on every change so phones pick up the update ---------- */
-const APP_VERSION = '2026-11-19.6';
+const APP_VERSION = '2026-11-19.7';
 
 /* ---------- helpers ---------- */
 const $ = s => document.querySelector(s);
@@ -312,9 +312,11 @@ function render(fromPoll){
   const v = $('#view');
   if (!HKEY){v.innerHTML = viewNoKey(); return;}
   if (!S.me){v.innerHTML = viewPicker(); return;}
-  v.innerHTML = ({add:viewAdd, month:viewMonth, enjoy:viewEnjoy, entries:viewEntries, settings:viewSettings}[S.tab])();
+  v.innerHTML = ({add:viewAdd, month:viewMonth, enjoy:viewEnjoy, entries:viewEntries, settings:viewSettings}[S.tab])() + verNote();
   if (S.sheet) renderSheet();
 }
+// App version shown at the bottom of every page, so you can check both phones are on the latest
+const verNote = () => `<p class="note num" style="text-align:center;margin-top:4px">Version ${APP_VERSION}</p>`;
 function syncNote(){
   if (S.sync === 'off') return `<div class="banner"><div class="t"><b>Not connected.</b> <span class="small">Showing the last copy on this phone. New entries need a connection.</span></div></div>`;
   return '';
