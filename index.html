@@ -366,8 +366,8 @@ function viewMonth(){
   <div class="tiles">
     <div class="tile i"><span class="eyebrow">Money in</span><span class="v">${money(s.inc)}</span><span class="small muted num">${alt(s.inc)}</span></div>
     <div class="tile o"><span class="eyebrow">Spent</span><span class="v">${money(s.out)}</span><span class="small muted num">${alt(s.out)}</span></div>
-    <div class="tile"><span class="eyebrow">Per day</span><span class="v">${money(s.out/dayN)}</span><span class="small muted num">${isNow?`over ${dayN} days so far`:`${dayN}-day month`}</span></div>
-    <div class="tile"><span class="eyebrow">Vs ${monthStart(addMonths(m,-1)).toLocaleDateString('en-GB',{month:'short'})}</span><span class="v" style="color:${diff>0?'var(--out)':'var(--in)'}">${p.n ? (diff>0?'+':'−') + money(Math.abs(diff)) : '–'}</span><span class="small muted num">${p.n ? `spent ${money(p.out)}` : 'no data'}</span></div>
+    <div class="tile"><span class="eyebrow">Per day</span><span class="v">${money(s.out/dayN)}</span><span class="small muted num">${alt(s.out/dayN)} · ${isNow?`over ${dayN} days so far`:`${dayN}-day month`}</span></div>
+    <div class="tile"><span class="eyebrow">Vs ${monthStart(addMonths(m,-1)).toLocaleDateString('en-GB',{month:'short'})}</span><span class="v" style="color:${diff>0?'var(--out)':'var(--in)'}">${p.n ? (diff>0?'+':'−') + money(Math.abs(diff)) : '–'}</span><span class="small muted num">${p.n ? `${diff>0?'+':'−'}${alt(Math.abs(diff))} · spent ${money(p.out)}` : 'no data'}</span></div>
   </div>
   <section class="card"><h3>Where it went</h3><p class="note" style="margin-top:-6px">Tap a category to see its entries.</p>
     ${catList.length ? `<div class="bars">${catList.map(([c,v]) => {
