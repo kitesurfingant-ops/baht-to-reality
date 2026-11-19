@@ -55,8 +55,8 @@ header.top .gut{display:flex;align-items:center;justify-content:space-between;ga
 .sync{width:8px;height:8px;border-radius:50%;background:var(--muted)} .sync.ok{background:var(--in)} .sync.bad{background:var(--out)}
 main.gut{padding-block:6px calc(96px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .row{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
-nav.tabs button{background:none;border:0;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:500;color:var(--muted)}
+nav.tabs .row{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs button{background:none;border:0;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;padding:0 2px;font-weight:500;color:var(--muted)}
 nav.tabs svg{width:24px;height:24px}
 nav.tabs button[aria-current="page"]{color:var(--ink);font-weight:700}
 nav.tabs button[aria-current="page"] svg{stroke:var(--in)}
@@ -149,6 +149,18 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .picker{display:flex;flex-direction:column;gap:16px;padding-top:20px}
 .pick{border:0;border-radius:16px;min-height:76px;font-weight:700;font-size:19px;color:#fff}
 .note{font-size:13.5px;color:var(--muted)}
+/* Enjoy tab: gold = fun money */
+.fun{border-radius:var(--r);padding:18px 16px;display:flex;flex-direction:column;gap:8px;background:var(--gold-soft)}
+.fun .v{font-family:var(--font-display);font-weight:800;font-size:clamp(34px,10vw,46px);line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--gold)}
+.fun.low{background:var(--out-soft)} .fun.low .v{color:var(--out)}
+.fun .mood{font-family:var(--font-display);font-weight:700;font-size:18px}
+.fun .track{background:var(--surface);height:12px} .fun .track i{background:var(--gold)} .fun.low .track i{background:var(--out)}
+.track.g i{background:var(--gold)}
+.funtag{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:0 12px;height:44px;font-weight:700;font-size:14px;color:var(--muted)}
+.funtag[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#fff}
+.calc{display:grid;grid-template-columns:1fr auto;gap:6px 0;font-size:15px;font-variant-numeric:tabular-nums}
+.calc span:nth-child(even){text-align:right;font-weight:600}
+.calc .tot{border-top:1px solid var(--line);padding-top:6px;font-weight:700}
 </style>
 </head>
 <body>
@@ -160,6 +172,7 @@ select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 <nav class="tabs" aria-label="Sections"><div class="row">
   <button data-act="tab" data-tab="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add</button>
   <button data-act="tab" data-tab="month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Month</button>
+  <button data-act="tab" data-tab="enjoy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 15v6M5 3h14l-7 9z"/><path d="M8.5 7.5h7"/></svg>Enjoy</button>
   <button data-act="tab" data-tab="entries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Entries</button>
   <button data-act="tab" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
 </div></nav>
@@ -248,13 +261,17 @@ window.addEventListener('online', () => refresh(true));
 const rate = () => num(S.cfg?.gbp_rate) || 0.0223;
 const cats = kind => (S.cfg?.categories || []).filter(c => c.kind === kind && c.active !== false).sort((a,b) => a.sort - b.sort).map(c => c.name);
 const monthRows = m => S.entries[m] || [];
+// Fun (discretionary) categories are ticked in Settings; every other spend counts as essential
+const funCats = () => (S.cfg?.categories || []).filter(c => c.kind === 'spend' && c.is_fun).map(c => c.name);
+const funBudget = () => num(S.cfg?.fun_budget_thb);
 function sums(m){
-  const rows = monthRows(m); const o = {inc:0, out:0, byCat:{}, byWho:{ant:0, jules:0, joint:0}, fixedOut:0, n:rows.length, hasFixed:rows.some(r => r.is_fixed), fromSheet:rows.some(r => r.notes === 'From Google Sheet')};
+  const rows = monthRows(m), fc = funCats(); const o = {inc:0, out:0, fun:0, byCat:{}, byWho:{ant:0, jules:0, joint:0}, fixedOut:0, n:rows.length, hasFixed:rows.some(r => r.is_fixed), fromSheet:rows.some(r => r.notes === 'From Google Sheet')};
   rows.forEach(r => {
     const a = num(r.amount_thb);
     if (r.kind === 'income'){o.inc += a; return;}
     o.out += a; o.byCat[r.category || 'Other'] = (o.byCat[r.category || 'Other'] || 0) + a;
     o.byWho[r.who || 'joint'] += a; if (r.is_fixed) o.fixedOut += a;
+    if (fc.includes(r.category)) o.fun += a;
   });
   return o;
 }
@@ -272,7 +289,7 @@ function render(fromPoll){
   const v = $('#view');
   if (!HKEY){v.innerHTML = viewNoKey(); return;}
   if (!S.me){v.innerHTML = viewPicker(); return;}
-  v.innerHTML = ({add:viewAdd, month:viewMonth, entries:viewEntries, settings:viewSettings}[S.tab])();
+  v.innerHTML = ({add:viewAdd, month:viewMonth, enjoy:viewEnjoy, entries:viewEntries, settings:viewSettings}[S.tab])();
   if (S.sheet) renderSheet();
 }
 function syncNote(){
@@ -385,6 +402,49 @@ function viewMonth(){
   <button class="btn full" data-act="tab" data-tab="entries">See all ${s.n} entries</button>`;
 }
 
+/* ----- Enjoy: the fun budget ----- */
+function viewEnjoy(){
+  const m = S.month, s = sums(m), fc = funCats(), bud = funBudget();
+  const nav = `<div class="mhead"><button class="btn ghost" data-act="month" data-d="-1" aria-label="Previous month">‹</button><h2>${monthName(m)}</h2><button class="btn ghost" data-act="month" data-d="1" aria-label="Next month">›</button></div>`;
+  if (!fc.length || !(bud > 0)) return `${syncNote()}${nav}<section class="card"><h3>Set up your fun money</h3>
+    <p class="muted">In Settings, set a monthly fun budget and tick which spending categories count as fun. Everything else counts as essentials.</p>
+    <button class="btn primary" data-act="tab" data-tab="settings">Go to Settings</button></section>`;
+  const nowM = mkey(new Date()), isNow = m === nowM, past = m < nowM;
+  const left = bud - s.fun, used = s.fun / bud;
+  const daysLeft = isNow ? daysIn(m) - new Date().getDate() + 1 : (past ? 0 : daysIn(m));   // today counts
+  const ess = s.out - s.fun;
+  const gap = s.inc - ess - bud;   // what's left after essentials and the full fun budget
+  const low = left < 0 || used > 0.85;
+  const mood = past ? (left >= 0 ? `Came in ${money(left)} under` : `Went ${money(-left)} over`)
+    : left < 0 ? 'Over budget – reel it in' : used > 0.85 ? 'Easy does it' : used < 0.5 && (!isNow || new Date().getDate() > 10) ? 'Plenty in the pot – go and enjoy it' : 'On track – enjoy yourselves';
+  const catList = fc.map(c => [c, s.byCat[c] || 0]).sort((a,b) => b[1]-a[1]);
+  return `${syncNote()}${nav}
+  <section class="fun ${low?'low':''}"><p class="eyebrow">${past ? 'Fun money left at month end' : 'Left to enjoy'}</p>
+    <span class="v">${money(left)}</span>
+    <span class="small num muted">${alt(left)} · ${money(s.fun)} of ${money(bud)} used</span>
+    <div class="track"><i style="width:${Math.min(100, used*100).toFixed(1)}%"></i></div>
+    <span class="mood">${mood}</span></section>
+  <div class="tiles">
+    <div class="tile"><span class="eyebrow">Per day left</span><span class="v">${daysLeft && left > 0 ? money(left/daysLeft) : '–'}</span><span class="small muted num">${daysLeft && left > 0 ? `${alt(left/daysLeft)} · ${daysLeft} day${daysLeft>1?'s':''} to go` : past ? 'month finished' : 'nothing left this month'}</span></div>
+    <div class="tile"><span class="eyebrow">Fun budget</span><span class="v">${money(bud)}</span><span class="small muted num">${alt(bud)} a month</span></div>
+  </div>
+  <section class="card"><h3>Where the fun went</h3>
+    <div class="bars">${catList.map(([c,v]) => {
+      const open = S.openCat === c;
+      const items = open ? monthRows(m).filter(r => r.kind === 'spend' && r.category === c).sort((a,b) => b.amount_thb - a.amount_thb) : [];
+      return `<button class="b" data-act="catopen" data-c="${esc(c)}" aria-expanded="${open}"><div class="top"><span><span class="chev">›</span>${esc(c)}</span><span>${money(v)} <span class="muted" style="font-weight:500">${alt(v)}</span></span></div><div class="track g"><i style="width:${Math.min(100, v/bud*100).toFixed(1)}%"></i></div></button>${open ? `<div class="list drill">${items.map(entRow).join('') || '<p class="small muted">Nothing yet.</p>'}</div>` : ''}`;
+    }).join('')}</div></section>
+  <section class="card"><h3>Does it add up?</h3>
+    <div class="calc">
+      <span>Money in</span><span>${money(s.inc)}</span>
+      <span>Essentials ${isNow ? 'so far' : ''}</span><span>− ${money(ess)}</span>
+      <span>Fun budget</span><span>− ${money(bud)}</span>
+      <span class="tot">${gap >= 0 ? 'Spare' : 'Top-up needed'}</span><span class="tot" style="color:${gap>=0?'var(--in)':'var(--gold)'}">${money(Math.abs(gap))}</span>
+    </div>
+    <p class="note num">${alt(Math.abs(gap))} ${gap >= 0 ? 'spare' : 'to put in'} if you use the whole fun budget.${isNow ? ' Essentials still to come this month (groceries, bills) will change this.' : ''} Essentials are every category not ticked as fun in Settings.</p>
+  </section>`;
+}
+
 /* ----- Entries ----- */
 function entRow(r){
   const w = r.who || 'none';
@@ -431,9 +491,10 @@ function installCard(){
   <div class="grid2"><button class="btn primary" data-act="installed">Done it</button><button class="btn" data-act="installed">Not now</button></div></section>`;
 }
 function viewSettings(){
-  if (!S.settingsDraft && S.cfg) S.settingsDraft = JSON.parse(JSON.stringify({gbp_rate:S.cfg.gbp_rate, categories:S.cfg.categories, fixed:S.cfg.fixed}));
+  if (!S.settingsDraft && S.cfg) S.settingsDraft = JSON.parse(JSON.stringify({gbp_rate:S.cfg.gbp_rate, fun_budget_thb:S.cfg.fun_budget_thb, categories:S.cfg.categories, fixed:S.cfg.fixed}));
   const d = S.settingsDraft || {gbp_rate:0.0223, categories:[], fixed:[]};
-  const catRows = kind => d.categories.map((c,i) => c.kind!==kind ? '' : `<div class="edit-row" style="grid-template-columns:1fr 40px"><input type="text" data-cat="${i}" value="${esc(c.name)}" aria-label="Category name"><button class="x" data-act="catdel" data-i="${i}" aria-label="Remove">×</button></div>`).join('');
+  const catRows = kind => d.categories.map((c,i) => c.kind!==kind ? '' : `<div class="edit-row" style="grid-template-columns:1fr ${kind==='spend'?'auto ':''}40px"><input type="text" data-cat="${i}" value="${esc(c.name)}" aria-label="Category name">${kind==='spend' ? `<button class="funtag" data-act="catfun" data-i="${i}" aria-pressed="${!!c.is_fun}" aria-label="Counts as fun">Fun</button>` : ''}<button class="x" data-act="catdel" data-i="${i}" aria-label="Remove">×</button></div>`).join('');
+  const budGbp = num(d.fun_budget_thb) * num(d.gbp_rate || 0.0223);
   const fx = d.fixed.map((f,i) => `<div style="display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px solid var(--line)">
       <div class="edit-row fx"><input type="text" data-fx="${i}" data-k="item" value="${esc(f.item)}" aria-label="Item"><input type="number" inputmode="decimal" data-fx="${i}" data-k="amount_thb" value="${num(f.amount_thb)}" aria-label="Amount in baht"><button class="x" data-act="fxdel" data-i="${i}" aria-label="Remove">×</button></div>
       <div class="grid2"><select data-fx="${i}" data-k="kind"><option value="spend" ${f.kind==='spend'?'selected':''}>Spend</option><option value="income" ${f.kind==='income'?'selected':''}>Money in</option></select>
@@ -444,6 +505,9 @@ function viewSettings(){
   <section class="card"><h3>Exchange rate</h3>
     <div class="row"><span class="grow">£1 = ฿</span><input type="number" step="0.1" inputmode="decimal" id="sRate" style="width:120px" value="${(1/num(d.gbp_rate||0.0223)).toFixed(2)}"></div>
     <p class="note">Used for the £ figures and for spends entered in pounds.</p></section>
+  <section class="card"><h3>Fun budget</h3>
+    <div class="row"><span class="grow">Each month £</span><input type="number" step="50" inputmode="decimal" id="sFun" style="width:120px" value="${budGbp ? Math.round(budGbp) : ''}"></div>
+    <p class="note num">≈ ${thb(num(d.fun_budget_thb))} at today's rate. Shown on the Enjoy tab. Tick <b>Fun</b> on the categories below that count; the rest are essentials.</p></section>
   <section class="card"><h3>Spending categories</h3>${catRows('spend')}<button class="btn" data-act="catadd" data-k="spend">+ Add category</button>
     <h3 style="margin-top:6px">Money-in categories</h3>${catRows('income')}<button class="btn" data-act="catadd" data-k="income">+ Add category</button></section>
   <section class="card"><h3>Fixed monthly items</h3><p class="note">Added to a month with one tap on the Month screen.</p><div>${fx}</div><button class="btn" data-act="fxadd">+ Add fixed item</button></section>
@@ -456,6 +520,7 @@ function readSettings(){
   document.querySelectorAll('[data-cat]').forEach(el => d.categories[+el.dataset.cat].name = el.value);
   document.querySelectorAll('[data-fx]').forEach(el => {const f = d.fixed[+el.dataset.fx]; f[el.dataset.k] = el.dataset.k === 'amount_thb' ? num(el.value) : el.value;});
   const r = num($('#sRate')?.value); if (r > 0) d.gbp_rate = Math.round(1/r * 1e6)/1e6;
+  const fEl = $('#sFun'); if (fEl) d.fun_budget_thb = num(fEl.value) > 0 ? Math.round(num(fEl.value) / num(d.gbp_rate || 0.0223)) : null;   // entered in £, kept in baht
 }
 
 /* ---------- events ---------- */
@@ -483,6 +548,7 @@ document.addEventListener('click', async e => {
     case 'applyfixed': try {const n = await rpc('fin_apply_fixed', {p_month:S.month + '-01'}); toast(n ? `Added ${n} fixed items` : 'Already added'); refresh(true);} catch(err){toast('Could not add them. Try again.');} break;
     case 'installed': LS.set('ts.installed','1'); render(); break;
     case 'catadd': S.settingsDraft.categories.push({kind:b.dataset.k, name:'', sort:99, active:true}); render(); break;
+    case 'catfun': {const c = S.settingsDraft.categories[+b.dataset.i]; c.is_fun = !c.is_fun; render(); break;}
     case 'catdel': S.settingsDraft.categories.splice(+b.dataset.i, 1); render(); break;
     case 'fxadd': S.settingsDraft.fixed.push({id:null, kind:'spend', item:'', category:cats('spend')[0] || '', amount_thb:0, who:'joint', sort:99, active:true}); render(); break;
     case 'fxdel': S.settingsDraft.fixed.splice(+b.dataset.i, 1); render(); break;
